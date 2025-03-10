@@ -16,6 +16,13 @@ int no_anon_net_maskv6[MAX_SUBNETS];
 int tot_no_anon_nets;
 int tot_no_anon_netsv6;
 
+struct in_addr double_anon_net_list[MAX_SUBNETS];
+struct in6_addr double_anon_net_listv6[MAX_SUBNETS];
+int double_anon_net_mask[MAX_SUBNETS];
+int double_anon_net_maskv6[MAX_SUBNETS];
+int tot_double_anon_nets;
+int tot_double_anon_netsv6;
+
 // sem_t mutex;
 
 /* All data structure initialization must be here */
@@ -54,6 +61,19 @@ void process_packet_init(int nb_sys_core)
                          no_anon_net_maskv6,
                          &tot_no_anon_nets,
                          &tot_no_anon_netsv6);
+
+            fclose(fp);
+
+            fp = fopen(out_interface[i].double_anon_subnet_file, "r");
+            ParseNetFile(fp,
+                         "double anonymized networks",
+                         MAX_SUBNETS,
+                         double_anon_net_list,
+                         double_anon_net_listv6,
+                         double_anon_net_mask,
+                         double_anon_net_maskv6,
+                         &tot_double_anon_nets,
+                         &tot_double_anon_netsv6);
 
             fclose(fp);
         }
@@ -157,34 +177,18 @@ void process_packet_ip(struct rte_mbuf *packet, out_interface_sett interface_set
             printf("ANON:    to   %s\n", inet_ntoa(dst_addr));
         }
 
-        if (no_anon_ip_check(src_addr) || no_anon_ip_check(dst_addr))
-        {
-            // only anonymize those in anon_net_list
-        }
-        else
+        if (double_anon_ip_check(src_addr) || double_anon_ip_check(dst_addr))
         {
             if (interface_setting.anon_ip_enabled == 1)
             {
                 if (strcmp(interface_setting.anon_ip_key_mode, "static") == 0)
                 {
-                    if (anon_ip_check(src_addr))
-                    {
-                        src_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &src_addr, id, core);
-                        ipv4_header->src_addr = src_addr.s_addr;
-                    }
-                    else
-                    {
-                        ip_origin += 10;
-                    }
-                    if (anon_ip_check(dst_addr))
-                    {
-                        dst_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &dst_addr, id, core);
-                        ipv4_header->dst_addr = dst_addr.s_addr;
-                    }
-                    else
-                    {
-                        ip_origin += 1;
-                    }
+                    if (!anon_ip_check(src_addr)) ip_origin += 10;
+                    if (!anon_ip_check(dst_addr)) ip_origin += 1;
+                    src_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &src_addr, id, core);
+                    ipv4_header->src_addr = src_addr.s_addr;
+                    dst_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &dst_addr, id, core);
+                    ipv4_header->dst_addr = dst_addr.s_addr;
 
                     if (VERBOSE > 0)
                     {
@@ -198,6 +202,51 @@ void process_packet_ip(struct rte_mbuf *packet, out_interface_sett interface_set
             /* Apply K-anon */
             if (interface_setting.engine != 0)
                 multiplexer_proto(ipv4_header, NULL, packet, core, tp, id, interface_setting, &crypto_data[core][id], ip_origin);
+        }
+        else
+        {
+            if (no_anon_ip_check(src_addr) || no_anon_ip_check(dst_addr))
+            {
+                // only anonymize those in anon_net_list
+            }
+            else
+            {
+                if (interface_setting.anon_ip_enabled == 1)
+                {
+                    if (strcmp(interface_setting.anon_ip_key_mode, "static") == 0)
+                    {
+                        if (anon_ip_check(src_addr))
+                        {
+                            src_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &src_addr, id, core);
+                            ipv4_header->src_addr = src_addr.s_addr;
+                        }
+                        else
+                        {
+                            ip_origin += 10;
+                        }
+                        if (anon_ip_check(dst_addr))
+                        {
+                            dst_addr.s_addr = retrieve_crypto_ip(&crypto_data[core][id], &dst_addr, id, core);
+                            ipv4_header->dst_addr = dst_addr.s_addr;
+                        }
+                        else
+                        {
+                            ip_origin += 1;
+                        }
+
+                        if (VERBOSE > 0)
+                        {
+                            printf("ANON:    new from %s\n", inet_ntoa(src_addr));
+                            printf("ANON:    new to   %s\n", inet_ntoa(dst_addr));
+                        }
+                    }
+                }
+                if (interface_setting.payload_drop_enabled == 1)
+                    l4_payload_remover(ipv4_header, NULL, packet, core, tp, id, interface_setting, &crypto_data[core][id], ip_origin);
+                /* Apply K-anon */
+                if (interface_setting.engine != 0)
+                    multiplexer_proto(ipv4_header, NULL, packet, core, tp, id, interface_setting, &crypto_data[core][id], ip_origin);
+            }
         }
     }
     /* Is IPv6 */
@@ -226,7 +275,7 @@ void process_packet_ip(struct rte_mbuf *packet, out_interface_sett interface_set
         {
             if (strcmp(interface_setting.anon_ip_key_mode, "static") == 0)
             {
-                if (anon_ip_checkv6(src_addr_6))
+                if (anon_ip_checkv6(src_addr_6) || double_anon_ip_checkv6(src_addr_6) || double_anon_ip_checkv6(dst_addr_6))
                 {
                     // sem_wait(&mutex);
                     src_addr_6 = *retrieve_crypto_ipv6(&crypto_data[core][id], &src_addr_6, id, core);
@@ -234,7 +283,7 @@ void process_packet_ip(struct rte_mbuf *packet, out_interface_sett interface_set
                     rte_memcpy(ipv6_header->src_addr, &src_addr_6.s6_addr, sizeof(src_addr_6.s6_addr));
                     // sem_post(&mutex);
                 }
-                if (anon_ip_checkv6(dst_addr_6))
+                if (anon_ip_checkv6(dst_addr_6) || double_anon_ip_checkv6(src_addr_6) || double_anon_ip_checkv6(dst_addr_6))
                 {
                     // sem_wait(&mutex);
                     dst_addr_6 = *retrieve_crypto_ipv6(&crypto_data[core][id], &dst_addr_6, id, core);

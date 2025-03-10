@@ -32,6 +32,12 @@ extern int no_anon_net_maskv6 [MAX_SUBNETS];
 extern int tot_no_anon_nets;
 extern int tot_no_anon_netsv6;
 
+extern struct in_addr double_anon_net_list [MAX_SUBNETS];
+extern struct in6_addr double_anon_net_listv6 [MAX_SUBNETS];
+extern int double_anon_net_mask [MAX_SUBNETS];
+extern int double_anon_net_maskv6 [MAX_SUBNETS];
+extern int tot_double_anon_nets;
+extern int tot_double_anon_netsv6;
 
 
 /* Functions */

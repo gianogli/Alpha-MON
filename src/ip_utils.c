@@ -40,6 +40,26 @@ int no_anon_ip_checkv6(struct in6_addr adx)
     return match_ipv6_net(adx, no_anon_net_listv6, no_anon_net_maskv6, tot_no_anon_netsv6);
 }
 
+int double_anon_ip_check(struct in_addr adx)
+{
+    int i;
+
+    for (i = 0; i < tot_double_anon_nets; i++)
+    {
+        if ((adx.s_addr & double_anon_net_mask[i]) == double_anon_net_list[i].s_addr)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int double_anon_ip_checkv6(struct in6_addr adx)
+{
+    return match_ipv6_net(adx, double_anon_net_listv6, double_anon_net_maskv6, tot_double_anon_netsv6);
+}
+
 int match_ipv6_net(struct in6_addr adx, struct in6_addr *internal_list, int *mask_list, int list_size)
 {
     static unsigned short int masks[] = {0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe, 0xff};

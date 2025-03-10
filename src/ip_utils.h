@@ -8,11 +8,13 @@ int anon_ip_check (struct in_addr adx);
 int anon_ip_checkv6 (struct in6_addr adx);
 int no_anon_ip_check (struct in_addr adx);
 int no_anon_ip_checkv6 (struct in6_addr adx);
+int double_anon_ip_check (struct in_addr adx);
+int double_anon_ip_checkv6 (struct in6_addr adx);
 int match_ipv6_net(struct in6_addr adx, struct in6_addr *internal_list, int *mask_list, int list_size);
 
 int ParseNetFile (  FILE *fp,
                     char *qualifier,
-                    int max_entries, 
+                    int max_entries,
                     struct in_addr *CLASS_net_list,
                     struct in6_addr *CLASS_net_listv6,
                     int *CLASS_net_mask,
