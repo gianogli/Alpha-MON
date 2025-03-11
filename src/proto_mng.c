@@ -638,7 +638,7 @@ void remove_dns_name(struct rte_mbuf *packet, ret_info info)
 {
     for (int i = 0; i < info.strLen; i++)
     {
-        info.offset = '0';
+        *(info.offset) = '0';
         info.offset++;
     }
 }
