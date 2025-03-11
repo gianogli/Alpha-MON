@@ -53,7 +53,7 @@ void process_packet_init(int nb_sys_core)
 
             fp = fopen(out_interface[i].no_anon_subnet_file, "r");
             ParseNetFile(fp,
-                         "anonymized networks",
+                         "not anonymized networks",
                          MAX_SUBNETS,
                          no_anon_net_list,
                          no_anon_net_listv6,
